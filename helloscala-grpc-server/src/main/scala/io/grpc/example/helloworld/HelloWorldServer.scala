@@ -61,6 +61,7 @@ object HelloWorldServer extends App {
 class GreeterImpl extends GreeterGrpc.Greeter {
   override def sayHello(req: HelloRequest): Future[HelloReply] = {
     val reply = HelloReply(message = "Hello " + req.name)
+    print(reply.toString)
     Future.successful(reply)
   }
 }

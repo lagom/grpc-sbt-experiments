@@ -1,42 +1,57 @@
-import com.trueaccord.scalapb.Scalapb
 import sbt.Keys.libraryDependencies
-
-organization in ThisBuild := "com.example"
-version in ThisBuild := "1.0-SNAPSHOT"
-
-// the Scala version that will be used for cross-compiled libraries
-scalaVersion in ThisBuild := "2.11.8"
+import grpc.sbt.sample.Versions
 
 val macwire = "com.softwaremill.macwire" %% "macros" % "2.2.5" % "provided"
 val scalaTest = "org.scalatest" %% "scalatest" % "3.0.1" % Test
 
-val scalapbVersion = "0.6.0-pre4"
 
 lazy val `helloscala` = (project in file("."))
-  .settings(common)
-  .aggregate(`helloscala-api`)
-
-lazy val `helloscala-api` = (project in file("helloscala-api"))
-  .enablePlugins(ProtocPlugin)
   .settings(
-    PB.protoSources in Compile := Seq(file("helloscala-api/src/main/protobuf"))
+    organization in ThisBuild := "com.example",
+    version in ThisBuild := "1.0-SNAPSHOT",
+    // the Scala version that will be used for cross-compiled libraries
+    scalaVersion in ThisBuild := "2.11.8"
   )
-  .settings(common ++ scalapbSettings)
+  .aggregate(`helloscala-grpc-server`, `helloscala-lagom-client`)
 
+lazy val `helloscala-grpc-server` = (project in file("helloscala-grpc-server"))
+  .enablePlugins(ProtocPlugin)
+  .settings(grpcCommon)
+  .settings(scalapbSettings("helloscala-grpc-server", forServer = true))
+
+lazy val `helloscala-lagom-client` = (project in file("helloscala-lagom-client"))
+  .enablePlugins(ProtocPlugin)
+  .settings(grpcCommon)
+  .settings(scalapbSettings("helloscala-lagom-client"))
+  .settings(
+    libraryDependencies ++= Seq(
+      lagomScaladslClient,
+      lagomScaladslApi,
+      lagomLogback
+    )
+  )
+
+
+// ------------------------------------------------------------------------------------------
 
 // TODO: generate grpc for java in any platform. See https://gitter.im/trueaccord/ScalaPB?at=59230464fa63ba2f766aba1b
-lazy val scalapbSettings = {
+def scalapbSettings(projectFolder: String, forServer: Boolean = false) = {
   Seq(
     PB.targets in Compile := Seq(
       PB.gens.java -> (sourceManaged in Compile).value,
-      scalapb.gen(javaConversions = true) -> (sourceManaged in Compile).value
-    )
+      scalapb.gen(
+        javaConversions = true,
+        grpc = forServer
+      ) -> (sourceManaged in Compile).value
+    ),
+    PB.protoSources in Compile := Seq(file(s"$projectFolder/src/main/protobuf"))
   )
 }
-lazy val common = Seq(
+
+lazy val grpcCommon = Seq(
   libraryDependencies ++= Seq(
-    "com.trueaccord.scalapb" %% "scalapb-runtime" % scalapbVersion,
-    "com.trueaccord.scalapb" %% "scalapb-runtime-grpc" % scalapbVersion,
+    "com.trueaccord.scalapb" %% "scalapb-runtime" % Versions.scalapbVersion,
+    "com.trueaccord.scalapb" %% "scalapb-runtime-grpc" % Versions.scalapbVersion,
     "io.grpc" % "grpc-netty" % "1.2.0"
   )
 )
