@@ -6,7 +6,7 @@ import com.lightbend.lagom.scaladsl.client.{ LagomClientApplication, StaticServi
 import io.grpc.examples.helloworld.HelloRequest
 import play.api.libs.ws.ahc.AhcWSComponents
 
-import scala.concurrent.Await
+import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration.Duration
 
 object Main extends App {
@@ -16,12 +16,14 @@ object Main extends App {
     with AhcWSComponents {
     override def staticServiceUri: URI = URI.create("http://localhost:50051")
   }
+  private implicit val exCtx = clientApp.actorSystem.dispatcher
 
   private val httpbinService = clientApp.serviceClient.implement[HelloLagomService]
+  private val sayHello = httpbinService.sayHello()
+  private val manyCalls = Future.sequence((1 to 10).map(_ => sayHello.invoke(HelloRequest("bob"))))
 
-  private val helloReply = Await.result(httpbinService.sayHello().invoke(HelloRequest("bob")), Duration(3, "seconds"))
+  Await.result(manyCalls, Duration(3, "seconds"))
 
-  println(helloReply)
   println("Invoking 'client.stop()'...")
   clientApp.stop()
 }

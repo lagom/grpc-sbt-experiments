@@ -8,9 +8,7 @@ import io.grpc.examples.helloworld.{ GreeterGrpc, HelloReply, HelloRequest }
 
 import scala.concurrent.{ ExecutionContext, Future }
 
-/**
-  *
-  */
+
 class HelloWorldServer() {
 
   val logger = Logger.getLogger(HelloWorldServer.getClass.getName)
